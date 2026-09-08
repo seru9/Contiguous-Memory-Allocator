@@ -1,0 +1,65 @@
+# Compiled files
+*.o
+*.a
+*.so
+*.dylib
+*.dll
+*.exe
+
+# Executables
+main
+*.out
+*.app
+
+# Build directories
+build/
+dist/
+*.build/
+
+# Dependencies and generated files
+*.d
+*.su
+*.gch
+*.pch
+
+# Debug symbols
+*.dSYM/
+*.su
+*.gch
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.sublime-project
+*.sublime-workspace
+.vim/
+.netrwhist
+
+# CMake (if used)
+CMakeFiles/
+cmake_install.cmake
+CMakeCache.txt
+Makefile.bak
+
+# Profiling and coverage
+*.gcno
+*.gcda
+*.coverage
+coverage/
+prof/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.log
+*.asm
+
+# OS-specific
+.DS_Store
+Thumbs.db
+.directory
