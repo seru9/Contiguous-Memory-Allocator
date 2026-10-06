@@ -29,4 +29,8 @@ typedef i32 b32;
 #define ERR(source) \
     (fprintf(stderr, "%s:%d\n", __FILE__, __LINE__), perror(source), kill(0, SIGKILL), exit(EXIT_FAILURE))
 
+//rounding n to the nearest multiplicity of p
+#define ALIGN_UP_POW2(n, p) (((u64)(n) + ((u64)(p) - 1)) & (~((u64)(p) - 1)))
+#define MEMORY_ALIGN sizeof(void*)
+#define APROX_PROCESS_COUNT 10
 #endif
