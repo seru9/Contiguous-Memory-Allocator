@@ -22,6 +22,7 @@ void program(size_t allocated_size){
     last_block->ptr = (u8*)ptr + sizeof(MemoryBlock);
     last_block->blockSize = allocated_size - sizeof(MemoryBlock);
     last_block->is_free = true;
+    last_block->process[0] = '\0';
     last_block->next = NULL;
     last_block->prev = NULL;
     printf("Memory starts at %p size: %zd \n", ptr, allocated_size);
@@ -38,17 +39,53 @@ void program(size_t allocated_size){
                 break;
             ERR("fgets"); // to change
         }
-        sscanf(input_bufer, "%15s %15s %zd %c", request, process, &bytes_number, &alghorithm);
-        printf("Request: %s Process: %s bytes_number: %zd algo: %c \n", request, process, bytes_number, alghorithm);
-        if(strcmp(request, "RQ") == 0){
-            request_block(bytes_number, last_block);
+        if (sscanf(input_bufer, "%15s", request) != 1) {
+            continue;
         }
+
+        if(strcmp(request, "RQ") == 0){
+            if (sscanf(input_bufer, "%15s %15s %zd %c", request, process, &bytes_number, &alghorithm) != 4) {
+                fprintf(stderr, "Invalid RQ command: %s", input_bufer);
+                continue;
+            }
+            printf("Request: %s Process: %s bytes_number: %zd algo: %c \n", request, process, bytes_number, alghorithm);
+            MemoryBlock* existing = find_process_block(last_block, process);
+            void* allocated_ptr = request_block(bytes_number, last_block, alghorithm, process);
+            if (!allocated_ptr) {
+                fprintf(stderr, "Allocation failed for process %s\n", process);
+                continue;
+            }
+            if (existing) {
+                release_block(existing);
+            }
+            continue;
+        }
+
         if(strcmp(request, "STAT") == 0){
             report(last_block);
+            continue;
         }
+
         if(strcmp(request, "RL") == 0){
-            release_block(last_block);
-        } 
+            if (sscanf(input_bufer, "%15s %15s", request, process) != 2) {
+                fprintf(stderr, "Invalid RL command: %s", input_bufer);
+                continue;
+            }
+            MemoryBlock* block = find_process_block(last_block, process);
+            if (!block) {
+                fprintf(stderr, "Process not found: %s\n", process);
+                continue;
+            }
+            release_block(block);
+            continue;
+        }
+
+        if(strcmp(request, "C") == 0){
+            compact(last_block, allocated_size);
+            continue;
+        }
+
+        fprintf(stderr, "Unknown command: %s\n", request);
 
     }
     release_memory(ptr, allocated_size);

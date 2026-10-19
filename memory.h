@@ -6,14 +6,16 @@ struct MemoryBlock{
     void* ptr;
     size_t blockSize;
     bool is_free;
+    char process[REQUEST_SIZE];
     MemoryBlock* next;
     MemoryBlock* prev;
 };
 
 void* request_memory(size_t size);
 void  release_memory(void* addr, size_t size);
-void* request_block(size_t size, MemoryBlock* first_block);
+void* request_block(size_t size, MemoryBlock* first_block, char algorithm, const char* process);
 void  release_block(MemoryBlock* first_block);
+MemoryBlock* find_process_block(MemoryBlock* first_block, const char* process);
 MemoryBlock* first_fit(size_t size, MemoryBlock* block);
 MemoryBlock* best_fit(size_t size, MemoryBlock* block);
 MemoryBlock* worst_fit(size_t size, MemoryBlock* block);

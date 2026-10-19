@@ -17,17 +17,32 @@ void release_memory(void* ptr, size_t size){
         ERR("munmap");
 }
 
-void* request_block(size_t size, MemoryBlock* first_block){
-    MemoryBlock* returnBlock = first_fit(size, first_block);
-    returnBlock->is_free = false;
-
+void* request_block(size_t size, MemoryBlock* first_block, char algorithm, const char* process){
     size_t aligned_request_size = ALIGN_UP_POW2(size, MEMORY_ALIGN);
-    size_t returnBlockSize = returnBlock->blockSize;
-    
-    returnBlock->blockSize = aligned_request_size;
+    MemoryBlock* returnBlock = NULL;
 
-    if(returnBlockSize < sizeof(MemoryBlock)){
-        goto return_ptr;
+    if (algorithm == 'B') {
+        returnBlock = best_fit(aligned_request_size, first_block);
+    } else if (algorithm == 'W') {
+        returnBlock = worst_fit(aligned_request_size, first_block);
+    } else {
+        returnBlock = first_fit(aligned_request_size, first_block);
+    }
+
+    if (!returnBlock) {
+        return NULL;
+    }
+
+    size_t returnBlockSize = returnBlock->blockSize;
+    size_t remainder = returnBlockSize - aligned_request_size;
+
+    returnBlock->is_free = false;
+    returnBlock->blockSize = aligned_request_size;
+    strncpy(returnBlock->process, process, REQUEST_SIZE - 1);
+    returnBlock->process[REQUEST_SIZE - 1] = '\0';
+
+    if (remainder < sizeof(MemoryBlock) + MEMORY_ALIGN) {
+        return returnBlock->ptr;
     }
 
     void* new_block_ptr = (u8*)(returnBlock->ptr) + aligned_request_size;
@@ -35,19 +50,24 @@ void* request_block(size_t size, MemoryBlock* first_block){
 
     newBlock->ptr = (u8*)new_block_ptr + sizeof(MemoryBlock);
     newBlock->is_free = true;
-    newBlock->blockSize = returnBlockSize - sizeof(MemoryBlock);
-    newBlock->next = returnBlock->next == NULL ? NULL : returnBlock->next;
+    newBlock->blockSize = remainder - sizeof(MemoryBlock);
+    newBlock->process[0] = '\0';
+    newBlock->next = returnBlock->next;
     newBlock->prev = returnBlock;
 
     returnBlock->next = newBlock;
+    if (newBlock->next) {
+        newBlock->next->prev = newBlock;
+    }
+
     printf("Return Block addr: %p with the size %zd \n", returnBlock->ptr, returnBlock->blockSize);
     printf("New Block addr: %p with the size %zd \n", newBlock->ptr, newBlock->blockSize);
-    return_ptr: 
-        return returnBlock->ptr;
+    return returnBlock->ptr;
 }
 void release_block(MemoryBlock* block){ 
     if(!block) return;
     block->is_free = true;
+    block->process[0] = '\0';
     MemoryBlock* prevBlock = block->prev;
     MemoryBlock* nextBlock = block->next;
     
@@ -82,18 +102,27 @@ void release_block(MemoryBlock* block){
         printf("DONE3\n");
     }
 }
+MemoryBlock* find_process_block(MemoryBlock* first_block, const char* process) {
+    MemoryBlock* temp = first_block;
+    while (temp != NULL) {
+        if (!temp->is_free && strncmp(temp->process, process, REQUEST_SIZE) == 0) {
+            return temp;
+        }
+        temp = temp->next;
+    }
+    return NULL;
+}
 void report(MemoryBlock* first_block){
     MemoryBlock* temp = first_block;
     while(temp != NULL){
-        printf("Address: %p of the size %zd is_free: %d \n", temp->ptr, temp->blockSize, temp->is_free);
+        printf("Address: %p of the size %zd is_free: %d process: %s \n", temp->ptr, temp->blockSize, temp->is_free, temp->process);
         temp = temp->next;
     }
 }
 MemoryBlock* first_fit(size_t size, MemoryBlock* block){
     MemoryBlock* temp = block;
-    size_t wholeBlockSize = size + sizeof(MemoryBlock);
     while(temp != NULL){
-        if(!temp->is_free || temp->blockSize < wholeBlockSize)
+        if(!temp->is_free || temp->blockSize < size)
         {
             temp = temp->next;
             continue;
@@ -175,6 +204,7 @@ void compact(MemoryBlock* firstBlock, size_t allocated_size) {
         freeBlock->ptr = write_ptr + sizeof(MemoryBlock);
         freeBlock->blockSize = remaining_size - sizeof(MemoryBlock);
         freeBlock->is_free = true;
+        freeBlock->process[0] = '\0';
         freeBlock->next = NULL;
         freeBlock->prev = last_moved;
 
